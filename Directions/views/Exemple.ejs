@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Directions service (complex)</title>
+    <style>
+      html, body, #map-canvas {
+        height: 100%;
+        margin: 0px;
+        padding: 0px
+      }
+      #panel {
+        position: absolute;
+        top: 5px;
+        left: 50%;
+        margin-left: -180px;
+        z-index: 5;
+        background-color: #fff;
+        padding: 5px;
+        border: 1px solid #999;
+      }
+    </style>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>
+    <script>
+//2 lignes +haut: appel aux scripts de google
+var map;
+var directionsDisplay;
+var directionsService;
+var stepDisplay;
+var markerArray = [];
+
+function initialize() {
+  directionsService = new google.maps.DirectionsService();  //initialisation
+
+ 
+  var montreal = new google.maps.LatLng(45.5020472, -73.8399786); //45.5020472,-73.8399786,15
+  var mapOptions = {
+    zoom: 13,
+    center: montreal
+  }
+  map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+
+  var rendererOptions = {
+    map: map
+  }
+  directionsDisplay = new google.maps.DirectionsRenderer(rendererOptions)
+
+  stepDisplay = new google.maps.InfoWindow();
+}
+
+function calcRoute() {
+
+  for (var i = 0; i < markerArray.length; i++) {   //Enlever les points existants sur la map
+    markerArray[i].setMap(null); 
+  }
+
+  markerArray = [];
+
+  var start = document.getElementById('start').value;  //Utilisation des sélection de début et fin par l'utilisateur
+  var end = document.getElementById('end').value;
+  var request = { //la requete envoyé a google
+      origin: start,
+      destination: end,
+      travelMode: google.maps.TravelMode.DRIVING  //Mode de transport: auto
+  }; 
+
+
+  directionsService.route(request, function(response, status) {
+    if (status == google.maps.DirectionsStatus.OK) {
+      var warnings = document.getElementById('warnings_panel');
+      warnings.innerHTML = '<b>' + response.routes[0].warnings + '</b>';    //On appelle l'API de Google pour savoir les directions
+      directionsDisplay.setDirections(response);                            
+      showSteps(response);                                                  //on appelle la fct pour afficher les coordonnés
+    }
+  });
+}
+
+function showSteps(directionResult) {
+ 
+  var myRoute = directionResult.routes[0].legs[0];
+
+  for (var i = 0; i < myRoute.steps.length; i++) {
+    var marker = new google.maps.Marker({                       //creation d'un marqueur
+      position: myRoute.steps[i].start_location,
+      map: map
+    });
+    attachInstructionText(marker, myRoute.steps[i].start_location);  //association des coordonnés au marqueur
+    markerArray[i] = marker;
+  }
+}
+
+function attachInstructionText(marker, text) {   //association des coordonnés au marqueur
+  google.maps.event.addListener(marker, 'click', function() {
+    stepDisplay.setContent(text.toString());
+    stepDisplay.open(map, marker);
+  });
+}
+
+google.maps.event.addDomListener(window, 'load', initialize);
+
+    </script>
+  </head>
+  <body>
+    <div id="panel">
+    <b>Start: </b>
+    <select id="start">
+      <option value="2900 Rue Lake Dollard-des-Ormeaux, QC H9B 2P1">Ecole Des Sources</option>
+      <option value="Bibliothèque de Pierrefonds, Boulevard de Pierrefonds, Montréal, QC">Biblio Pierrefonds</option>
+      <option value="Parc Nature de l'ile-bizard, QC">Parc nature ile-bizard</option>
+    </select>
+    <b>End: </b>
+    <select id="end" onchange="calcRoute();">
+      <option value="CEGEP Gerald-Godin, QC">Gérald-Godin</option>
+      <option value="12001 Boulevard de Salaberry Dollard-des-Ormeaux, QC H9B 2A7C">Biblio DDO</option>
+      <option value="Parc Brook, QC">Parc Brook</option>
+ 
+    </select>
+    </div>
+    <div id="map-canvas"></div>
+    &nbsp;
+    <div id="warnings_panel" style="width:100%;height:10%;text-align:center"></div>
+  </body>
+</html>
